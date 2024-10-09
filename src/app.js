@@ -11,10 +11,10 @@ app.use(cookieParser())
 
 
 //routes import
-
+import cryptoRouter from "./routes/crypto.routes.js";
 
 
 //routes declaration
-
+app.use("/crypto",cryptoRouter);
 
 export { app }
