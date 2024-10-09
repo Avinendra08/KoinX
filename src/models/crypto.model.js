@@ -2,19 +2,19 @@ import mongoose, { Schema } from "mongoose";
 
 const cryptoSchema = new Schema(
   {
-    coinName: {
+    coin: {
       type: String,
       required: true,
     },
-    currentPrice: {
+    usd: {
       type: Number,
       required: true,
     },
-    marketCap: {
+    usd_market_cap: {
       type: Number,
       required: true,
     },
-    changeIn24Hour: {
+    usd_24h_change: {
       type: Number,
       required: true,
     },
