@@ -67,4 +67,28 @@ const cryptoDataImportController = async () => {
   }
 };
 
-export { cryptoDataImportController };
+const getLatestCryptoStats = asyncHandler(async (req, res) => {
+  const cryptoName = req.query.coin;
+  if (!cryptoName || !Coins.includes(cryptoName)) {
+    return res
+      .status(400)
+      .json({ error: "Please enter valid Crypto-coin name" });
+  }
+
+  const stats = await Cryptocoin.findOne({ coin: cryptoName }).sort({createdAt: -1,});
+
+  if (!stats) {
+    return res
+      .status(404)
+      .json({ error: "No data found for the requested coin" });
+  }
+
+  res.json({
+    message:`Latest stats for ${cryptoName} are:`,
+    price: stats.usd,
+    marketCap: stats.usd_market_cap,
+    "24hChange": stats.usd_24h_change,
+  });
+});
+
+export { getLatestCryptoStats };
