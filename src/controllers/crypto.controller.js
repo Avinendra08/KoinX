@@ -5,12 +5,22 @@ import axios from "axios";
 import cron from "node-cron";
 
 const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
-const Coins = ["bitcoin", "matic-network", "ethereum"];
 // coins' ids, comma-separated if querying more than 1 coin.
-// *refers to /coins/list.
+const Coins = ["bitcoin", "matic-network", "ethereum"];
 
-//scheduling with the help of node-cron package
-//Schedule cryptoDataImportController to run every 2 hours (* * * * * *)
+//function to calculate standard deviation of an array
+const calculateStandardDeviation = (arr) => {
+  const n = arr.length;
+  if (n === 0) return 0;
+  //average
+  const average = arr.reduce((acc, value) => acc + value, 0) / n;
+  //variance
+  const variance =
+    arr.reduce((acc, value) => acc + (value - average) ** 2, 0) / n;
+  return Math.sqrt(variance);
+};
+
+//Schedule cryptoDataImportController to run every 2 hours (* * * * * *) with the help of node-cron package
 cron.schedule("0 0 */2 * * *", async () => {
   try {
     console.log("Fetching latest cryptocurrency data...");
@@ -75,7 +85,9 @@ const getLatestCryptoStats = asyncHandler(async (req, res) => {
       .json({ error: "Please enter valid Crypto-coin name" });
   }
 
-  const stats = await Cryptocoin.findOne({ coin: cryptoName }).sort({createdAt: -1,});
+  const stats = await Cryptocoin.findOne({ coin: cryptoName }).sort({
+    createdAt: -1,
+  });
 
   if (!stats) {
     return res
@@ -84,11 +96,47 @@ const getLatestCryptoStats = asyncHandler(async (req, res) => {
   }
 
   res.json({
-    message:`Latest stats for ${cryptoName} are:`,
+    message: `Latest stats for ${cryptoName} are:`,
     price: stats.usd,
     marketCap: stats.usd_market_cap,
     "24hChange": stats.usd_24h_change,
   });
 });
 
-export { getLatestCryptoStats };
+const getCryptoDeviation = asyncHandler(async (req, res) => {
+  const cryptoName = req.query.coin;
+  if (!cryptoName || !Coins.includes(cryptoName)) {
+    return res
+      .status(400)
+      .json({ error: "Please enter valid Crypto-coin name" });
+  }
+
+  const priceData = await Cryptocoin.aggregate([
+    {
+      $match: { coin: cryptoName },
+    },
+    {
+      $project: { usd: 1 },
+    },
+    {
+      $sort: { createdAt: -1 },
+    },
+    {
+      $limit: 100,
+    },
+  ]);
+
+  //res.json({priceData});
+  if (priceData.length === 0) {
+    return res
+      .status(404)
+      .json({ error: "Not enough data to calculate deviation" });
+  }
+
+  const prices = priceData.map((entry) => entry.usd);
+  console.log({prices});
+  const deviation = calculateStandardDeviation(prices);
+  res.json({ deviation });
+});
+
+export { getLatestCryptoStats, getCryptoDeviation };
